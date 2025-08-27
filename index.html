@@ -45,8 +45,9 @@
           radial-gradient(900px 700px at 110% 10%, #2f5b7a 0%, rgba(47,91,122,0.18) 40%, transparent 65%),
           linear-gradient(180deg, #0f1430 0%, var(--bg) 60%);
         color: var(--text);
-        display: grid;
-        place-items: center;
+        display: block; /* permitir layout natural con scroll */
+        min-height: 100svh;
+        overflow-y: auto;
         overflow-x: hidden;
         padding-top: env(safe-area-inset-top);
       }
@@ -55,8 +56,8 @@
         max-width: 920px;
         padding: clamp(16px, 5vw, 28px);
         min-height: 100svh;
-        display: grid;
-        place-items: center;
+        margin: 0 auto; /* centrar horizontalmente */
+        display: block; /* no centrar verticalmente para permitir crecimiento */
       }
       .card {
         background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.02));
@@ -73,6 +74,7 @@
         height: 120px;
         border-radius: 20px;
         object-fit: cover;
+        display: block;
         box-shadow: 0 10px 26px rgba(0,0,0,0.4);
         border: 1px solid rgba(255,255,255,0.15);
       }
@@ -127,8 +129,8 @@
       .btn-telegram { background: var(--accent); }
       .btn-whatsapp { background: var(--secondary); }
       .btn-telegram:focus-visible, .btn-whatsapp:focus-visible { outline-color: var(--ring); }
-      .share-panel { margin-top: 22px; }
-      .share-label {
+      .share-panel { margin-top: 22px; position: relative; z-index: 2; }
+      .share-label, .share-toggle {
         display: inline-flex;
         align-items: center;
         gap: 8px;
@@ -138,16 +140,65 @@
         margin-bottom: 10px;
         user-select: none;
       }
-      .share-label svg { width: 16px; height: 16px; opacity: .9; }
+      .share-label svg, .share-toggle svg { width: 16px; height: 16px; opacity: .9; }
+      .share-toggle {
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.12);
+        padding: 10px 12px;
+        border-radius: 12px;
+        cursor: pointer;
+        width: 100%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: space-between;
+        transition: background .2s ease, border-color .2s ease, transform .08s ease;
+      }
+      .share-toggle:hover { background: rgba(255,255,255,0.06); border-color: rgba(159,180,255,0.28); }
+      .share-toggle:active { transform: scale(0.997); }
+      .share-toggle:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+      .share-toggle .chev { transition: transform .2s ease; opacity: .8; }
+      .share-toggle[aria-expanded="true"] .chev { transform: rotate(180deg); opacity: 1; }
+      /* Hint: solo visible cuando está cerrado */
+      .toggle-hint { color: var(--muted); font-weight: 700; font-size: 12px; opacity: .8; margin-left: 8px; }
+      .share-toggle[aria-expanded="true"] .toggle-hint { display: none; }
+      /* Burbuja de icono y píldora del chevron */
+      .icon-bubble {
+        width: 26px; height: 26px; border-radius: 999px;
+        display: inline-flex; align-items: center; justify-content: center;
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.14);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.18) inset;
+        margin-right: 6px;
+      }
+      .chev-pill {
+        width: 28px; height: 28px; border-radius: 999px;
+        display: inline-flex; align-items: center; justify-content: center;
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.12);
+      }
       .share {
+        position: relative;
+        z-index: 3;
         display: flex;
         flex-wrap: wrap;
         gap: 10px;
-        padding: 12px;
-        background: rgba(255,255,255,0.04);
-        border: 1px solid rgba(255,255,255,0.12);
+        padding: 14px;
+        margin-top: 10px;
+        background: rgba(20,25,46,0.12);
+        border: 1px solid rgba(255,255,255,0.16);
         border-radius: 14px;
+        backdrop-filter: blur(6px);
       }
+      .share .share-hint {
+        flex: 1 1 100%;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin: 2px 0 6px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .share[hidden] { display: none; }
       .share .sbtn {
         background: transparent;
         border: 1px solid rgba(255,255,255,0.18);
@@ -164,7 +215,6 @@
       }
       .share .sbtn:hover { background: rgba(255,255,255,0.08); transform: translateY(-1px); border-color: rgba(159,180,255,0.45); color: #e8ecff; }
       .share .sbtn svg { width: 18px; height: 18px; }
-      .footnote { margin-top: 18px; font-size: 14px; color: var(--muted); }
       @media (max-width: 720px) {
         header { align-items: center; flex-direction: column; text-align: center; }
         .logo { width: 96px; height: 96px; border-radius: 16px; }
@@ -219,11 +269,23 @@
         </div>
 
         <div class="share-panel">
-          <div class="share-label">
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M15 8a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm-9 9a6 6 0 0 1 12 0v1a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-1Z"/></svg>
-            <span>Condividi</span>
-          </div>
-          <div class="share" aria-label="Condividi Sagra Irpina" role="group">
+          <button class="share-toggle" id="share-toggle" type="button" aria-expanded="false" aria-controls="share-group">
+            <span style="display:inline-flex;align-items:center;gap:8px;">
+              <span class="icon-bubble" aria-hidden="true">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M15 8a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm-9 9a6 6 0 0 1 12 0v1a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-1Z"/></svg>
+              </span>
+              <strong>Condividi</strong>
+              <span class="toggle-hint" aria-hidden="true">clicca per aprire</span>
+            </span>
+            <span class="chev-pill" aria-hidden="true">
+              <svg class="chev" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>
+            </span>
+          </button>
+          <div id="share-group" class="share" aria-label="Condividi Sagra Irpina" role="group" hidden>
+          <p class="share-hint" id="share-hint">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" style="width:16px;height:16px;opacity:.9"><path fill="currentColor" d="M12 21c-.3 0-.6-.1-.8-.3l-6.4-5.8a5 5 0 0 1 .2-7.6c1.9-1.6 4.7-1.2 6.3.7.1.2.3.2.4 0 1.6-1.9 4.4-2.3 6.3-.7a5 5 0 0 1 .2 7.6l-6.4 5.8c-.2.2-.5.3-.8.3Z"/></svg>
+            <span>Aiutaci a far conoscere Sagra Irpina: condividi il link con amici e famiglia.</span>
+          </p>
           <button class="sbtn" id="share-native" type="button">
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M13 3a1 1 0 1 0-2 0v7.06l-2.47-2.47a1 1 0 1 0-1.42 1.42l4.18 4.18c.39.39 1.02.39 1.41 0l4.18-4.18a1 1 0 0 0-1.42-1.42L13 10.06V3ZM5 14a2 2 0 0 0-2 2v2.99A2.01 2.01 0 0 0 5 21h14a2 2 0 0 0 2-2.01V16a2 2 0 0 0-2-2h-4a1 1 0 1 0 0 2h4v3H5V16h4a1 1 0 1 0 0-2H5Z"/></svg>
             <span>Condividi</span>
@@ -254,10 +316,6 @@
           </a>
         </div>
 
-        <p class="footnote">Dominio ufficiale: <a href="https://sagrairpina.irpiniaviva.it" style="color:#9fb4ff">sagrairpina.irpiniaviva.it</a></p>
-      </div>
-    </div>
-
     <!-- Toast -->
     <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true">Copiato negli appunti</div>
 
@@ -274,7 +332,43 @@
         const $x = document.getElementById('share-x');
         const $fb = document.getElementById('share-facebook');
         const $em = document.getElementById('share-email');
+        const $toggle = document.getElementById('share-toggle');
+        const $shareGroup = document.getElementById('share-group');
         const $toast = document.getElementById('toast');
+        const $sharePanel = document.querySelector('.share-panel');
+
+        // Toggle sezione "Condividi"
+        $toggle?.addEventListener('click', () => {
+          const isHidden = $shareGroup.hasAttribute('hidden');
+          if (isHidden) {
+            $shareGroup.removeAttribute('hidden');
+            $toggle.setAttribute('aria-expanded', 'true');
+          } else {
+            $shareGroup.setAttribute('hidden', '');
+            $toggle.setAttribute('aria-expanded', 'false');
+          }
+        });
+
+        // Permitir clic en la franja superior del panel (fuera del grupo) para alternar
+        $sharePanel?.addEventListener('click', (e) => {
+          if (e.target.closest('#share-group')) return; // no interceptar clicks internos
+          if (e.target.closest('#share-toggle')) return; // el botón ya maneja
+          $toggle?.click();
+        });
+
+        // Apri per default su desktop (>= 721px) e resta chiuso su mobile
+        function setShareOpen(open) {
+          if (open) {
+            $shareGroup.removeAttribute('hidden');
+            $toggle.setAttribute('aria-expanded', 'true');
+          } else {
+            $shareGroup.setAttribute('hidden', '');
+            $toggle.setAttribute('aria-expanded', 'false');
+          }
+        }
+        const mqDesktop = window.matchMedia('(min-width: 721px)');
+        setShareOpen(mqDesktop.matches);
+        mqDesktop.addEventListener?.('change', (e) => setShareOpen(e.matches));
 
         // Prepara i link di condivisione
         const encodedUrl = encodeURIComponent(pageUrl);
